@@ -11,6 +11,7 @@ namespace _2_convex_hull
     {
         Graphics g;
         Pen pen = new Pen(Color.Red, 1f);
+        List<PointF> points;
         System.Windows.Forms.PictureBox pictureBoxView;
 
         public ConvexHullSolver(System.Drawing.Graphics g, System.Windows.Forms.PictureBox pictureBoxView)
@@ -34,84 +35,143 @@ namespace _2_convex_hull
 
         public void Solve(List<PointF> pointList)
         {
+
             GenerateSolution(pointList);
         }
 
         private void GenerateSolution(List<PointF> pointList)
         {
             List<PointF> sortedList = pointList.OrderBy(o => o.X).ToList();
-            Split(sortedList);
+            points = sortedList;
+            if(sortedList.Count > 1)
+            {
+                DrawPolygon(Split(sortedList));
+            }
         }
 
         private Polygon Merge(Polygon p1, Polygon p2)
         {
-            // FindTop(currentPolygon, mergingPolygon);
+            Tuple<PolyPoint, PolyPoint> top = FindTop(p1, p2);
+            Tuple<PolyPoint, PolyPoint> bottom = FindBottom(p1, p2);
 
-            return currentPolygon;
+            top.Item1.prev = top.Item2;
+            top.Item2.next = top.Item1;
+
+            bottom.Item1.next = bottom.Item2;
+            bottom.Item2.prev = bottom.Item1;
+
+            return new Polygon(p1.left, p2.right);
         }
 
-        /*
-        private void FindTop(Polygon leftPolygon, Polygon rightPolygon)
+        private Tuple<PolyPoint, PolyPoint> FindTop(Polygon leftPolygon, Polygon rightPolygon)
         {
             bool leftPolygonIsFinished = false;
             bool rightPolygonIsFinished = false;
-            PointF currentLeft = leftPolygon.GetRight();
-            PointF currentRight = rightPolygon.GetLeft();
+            PolyPoint currentLeft = leftPolygon.right;
+            PolyPoint currentRight = rightPolygon.left;
+            PolyPoint startingLeft = currentLeft;
+            PolyPoint startingRight = currentRight;
 
-            double currentSlope = GetSlope(currentLeft, currentRight);
+            double currentSlope = GetSlope(currentLeft.centerPoint, currentRight.centerPoint);
 
             while(!leftPolygonIsFinished || !rightPolygonIsFinished)
             {
-                while(!leftPolygonIsFinished && leftPolygon.hasPrev())
+                while(!leftPolygonIsFinished)
                 {
-                    double newSlope = GetSlope(leftPolygon.GetPrev(), currentRight);
-                    
-                    // TODO: REMOVE ME
-                    // DrawLine(currentLeft, currentRight);
-                    if (newSlope > currentSlope)
+                    currentLeft = currentLeft.next;
+                    double newSlope = GetSlope(currentLeft.centerPoint, currentRight.centerPoint);
+                    if (newSlope < currentSlope)
                     {
                         rightPolygonIsFinished = false;
-                        currentLeft = leftPolygon.GetPrev();
                         currentSlope = newSlope;
                     }
                     else
                     {
+                        currentLeft = currentLeft.prev;
                         leftPolygonIsFinished = true;
                     }
                 }
 
-                while(!rightPolygonIsFinished && rightPolygon.hasNext())
+                while(!rightPolygonIsFinished)
                 {
-                    double newSlope = GetSlope(currentLeft, rightPolygon.GetNext());
-
-                    // TODO: REMOVE ME
-                    // DrawLine(currentLeft, currentRight);
-                    if (newSlope < currentSlope)
+                    currentRight = currentRight.prev;
+                    double newSlope = GetSlope(currentLeft.centerPoint, currentRight.centerPoint);
+                    if (newSlope > currentSlope)
                     {
                         leftPolygonIsFinished = false;
-                        currentRight = rightPolygon.GetNext();
                         currentSlope = newSlope;
                     }
                     else
                     {
+                        currentRight = currentRight.next;
                         rightPolygonIsFinished = true;
                     }
                 }
             }
 
-            DrawLine(currentLeft, currentRight);
+            return Tuple.Create(currentLeft, currentRight);
         }
-        */
+
+        private Tuple<PolyPoint, PolyPoint> FindBottom(Polygon leftPolygon, Polygon rightPolygon)
+        {
+            bool leftPolygonIsFinished = false;
+            bool rightPolygonIsFinished = false;
+            PolyPoint currentLeft = leftPolygon.right;
+            PolyPoint currentRight = rightPolygon.left;
+            PolyPoint startingLeft = currentLeft;
+            PolyPoint startingRight = currentRight;
+
+            double currentSlope = GetSlope(currentLeft.centerPoint, currentRight.centerPoint);
+
+            while (!leftPolygonIsFinished || !rightPolygonIsFinished)
+            {
+                while (!leftPolygonIsFinished)
+                {
+                    currentLeft = currentLeft.prev;
+                    double newSlope = GetSlope(currentLeft.centerPoint, currentRight.centerPoint);
+                    if (newSlope > currentSlope)
+                    {
+                        rightPolygonIsFinished = false;
+                        currentSlope = newSlope;
+                    }
+                    else
+                    {
+                        currentLeft = currentLeft.next;
+                        leftPolygonIsFinished = true;
+                    }
+                }
+
+                while (!rightPolygonIsFinished)
+                {
+                    currentRight = currentRight.next;
+                    double newSlope = GetSlope(currentLeft.centerPoint, currentRight.centerPoint);
+                    if (newSlope < currentSlope)
+                    {
+                        leftPolygonIsFinished = false;
+                        currentSlope = newSlope;
+                    }
+                    else
+                    {
+                        currentRight = currentRight.prev;
+                        rightPolygonIsFinished = true;
+                    }
+                }
+            }
+
+            return Tuple.Create(currentLeft, currentRight);
+        }
 
         private Polygon Split(List<PointF> pointList)
         {
             if (pointList.Count == 2)
             {
-                return CreateTwoPointPolygon(pointList);
+                Polygon newPolygon = CreateTwoPointPolygon(pointList);
+                return newPolygon;
             } 
             else if (pointList.Count == 3)
             {
-                return CreateThreePointPolygon(pointList);
+                Polygon newPolygon = CreateThreePointPolygon(pointList);
+                return newPolygon;
             }
             else
             {
@@ -119,7 +179,8 @@ namespace _2_convex_hull
                 Polygon p1 = Split(GetLeft(centerIndex, pointList));
                 Polygon p2 = Split(GetRight(centerIndex, pointList));
 
-                return Merge(p1, p2);
+                Polygon newPolygon = Merge(p1, p2);
+                return newPolygon;
             }
         }
 
@@ -143,14 +204,14 @@ namespace _2_convex_hull
             PolyPoint p1 = new PolyPoint(pointList[1]);
             PolyPoint p2 = new PolyPoint(pointList[2]);
 
-            double oneToOne = GetSlope(pointList[0], pointList[1]);
-            double oneToTwo = GetSlope(pointList[0], pointList[2]);
+            double zeroToOne = GetSlope(pointList[0], pointList[1]);
+            double zeroToTwo = GetSlope(pointList[0], pointList[2]);
 
             // The slope of oneToOne is more negative
             // than oneToTwo. Thus, to maintain clockwise
             // order, pointList[1] is the PolyPoint.next
             // of pointList[0].
-            if (oneToOne < oneToTwo)
+            if (zeroToOne < zeroToTwo)
             {
                 p0.next = p1;
                 p0.prev = p2;
@@ -176,7 +237,7 @@ namespace _2_convex_hull
         private double GetSlope(PointF left, PointF right)
         {
             /*
-            x2                      x1
+            x2      x1
            y1 |------------------------
               | *
               |  \
@@ -189,12 +250,12 @@ namespace _2_convex_hull
                 Therefore, it will be referred to that way in the code.
             */
             
-            double x2 = left.X;
+            double x1 = left.X;
             double y1 = left.Y;
-            double x1 = right.X;
+            double x2 = right.X;
             double y2 = right.Y;
 
-            return (x1 - x2) / (y1 - y2);
+            return (y1 - y2) / (x2 - x1);
         }
 
         private void DrawPolygon(Polygon polygon)
@@ -215,6 +276,7 @@ namespace _2_convex_hull
         private void DrawLine(PointF point1, PointF point2)
         {
             g.DrawLine(pen, point1, point2);
+            Pause(10);
         }
 
         // Splits the array and takes the right side, NOT including the centerIndex value.
