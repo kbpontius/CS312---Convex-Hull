@@ -40,18 +40,10 @@ namespace _2_convex_hull
         private void GenerateSolution(List<PointF> pointList)
         {
             List<PointF> sortedList = pointList.OrderBy(o => o.X).ToList();
-
             Split(sortedList);
-
-            Polygon currentPolygon = polygonList[0];
-
-            for(int i = 1; i < polygonList.Count; i++)
-            {
-                currentPolygon = Merge(currentPolygon, polygonList[i]);
-            }
         }
 
-        private Polygon Merge(Polygon currentPolygon, Polygon mergingPolygon)
+        private Polygon Merge(Polygon p1, Polygon p2)
         {
             // FindTop(currentPolygon, mergingPolygon);
 
@@ -111,38 +103,45 @@ namespace _2_convex_hull
         }
         */
 
-        private void Split(List<PointF> pointList)
+        private Polygon Split(List<PointF> pointList)
         {
-            if (pointList.Count == 3)
+            if (pointList.Count == 2)
             {
-                Polygon polygon = CreateThreePointPolygon(pointList);
-                DrawPolygon(polygon);
-            }
-            else if (pointList.Count == 2)
+                return CreateTwoPointPolygon(pointList);
+            } 
+            else if (pointList.Count == 3)
             {
-                Polygon polygon = CreateTwoPointPolygon(pointList);
+                return CreateThreePointPolygon(pointList);
             }
             else
             {
                 int centerIndex = (pointList.Count - 1) / 2;
-                Split(GetLeft(centerIndex, pointList));
-                Split(GetRight(centerIndex, pointList));
+                Polygon p1 = Split(GetLeft(centerIndex, pointList));
+                Polygon p2 = Split(GetRight(centerIndex, pointList));
+
+                return Merge(p1, p2);
             }
         }
 
         private Polygon CreateTwoPointPolygon(List<PointF> pointList)
         {
-            PolyPoint p1 = new PolyPoint(pointList[0], pointList[1]);
-            PolyPoint p2 = new PolyPoint(pointList[1], pointList[0]);
+            PolyPoint p1 = new PolyPoint(pointList[0]);
+            PolyPoint p2 = new PolyPoint(pointList[1]);
+
+            p1.next = p2;
+            p1.prev = p2;
+
+            p2.next = p1;
+            p2.prev = p1;
 
             return new Polygon(p1, p2);
         }
 
         private Polygon CreateThreePointPolygon(List<PointF> pointList)
         {
-            PolyPoint p1;
-            PolyPoint p2;
-            PolyPoint p3;
+            PolyPoint p0 = new PolyPoint(pointList[0]);
+            PolyPoint p1 = new PolyPoint(pointList[1]);
+            PolyPoint p2 = new PolyPoint(pointList[2]);
 
             double oneToOne = GetSlope(pointList[0], pointList[1]);
             double oneToTwo = GetSlope(pointList[0], pointList[2]);
@@ -153,18 +152,24 @@ namespace _2_convex_hull
             // of pointList[0].
             if (oneToOne < oneToTwo)
             {
-                p1 = new PolyPoint(pointList[0], pointList[2], pointList[1]);
-                p2 = new PolyPoint(pointList[1], pointList[0], pointList[2]);
-                p3 = new PolyPoint(pointList[2], pointList[1], pointList[0]);
+                p0.next = p1;
+                p0.prev = p2;
+                p1.next = p2;
+                p1.prev = p0;
+                p2.next = p0;
+                p2.prev = p1;
             }
             else
             {
-                p1 = new PolyPoint(pointList[0], pointList[1], pointList[2]);
-                p2 = new PolyPoint(pointList[1], pointList[2], pointList[1]);
-                p3 = new PolyPoint(pointList[2], pointList[0], pointList[1]);
+                p0.next = p2;
+                p0.prev = p1;
+                p1.next = p0;
+                p1.prev = p2;
+                p2.next = p1;
+                p2.prev = p0;
             }
 
-            return new Polygon(p1, p3);
+            return new Polygon(p0, p2);
         }
 
         // HELPER METHODS
@@ -195,7 +200,16 @@ namespace _2_convex_hull
         private void DrawPolygon(Polygon polygon)
         {
             PolyPoint initialPoint = polygon.left;
+            PolyPoint currentPoint = polygon.left;
 
+            DrawLine(currentPoint.centerPoint, currentPoint.next.centerPoint);
+            currentPoint = currentPoint.next;
+
+            while(currentPoint != initialPoint)
+            {
+                DrawLine(currentPoint.centerPoint, currentPoint.next.centerPoint);
+                currentPoint = currentPoint.next;
+            }
         }
 
         private void DrawLine(PointF point1, PointF point2)
