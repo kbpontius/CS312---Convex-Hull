@@ -35,7 +35,6 @@ namespace _2_convex_hull
 
         public void Solve(List<PointF> pointList)
         {
-
             GenerateSolution(pointList);
         }
 
@@ -237,7 +236,7 @@ namespace _2_convex_hull
         private double GetSlope(PointF left, PointF right)
         {
             /*
-            x2      x1
+            x1      x2
            y1 |------------------------
               | *
               |  \
@@ -276,7 +275,6 @@ namespace _2_convex_hull
         private void DrawLine(PointF point1, PointF point2)
         {
             g.DrawLine(pen, point1, point2);
-            Pause(10);
         }
 
         // Splits the array and takes the right side, NOT including the centerIndex value.
